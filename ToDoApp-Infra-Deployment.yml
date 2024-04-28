@@ -1,0 +1,86 @@
+trigger: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  State_File_Name: todoappinfra.terraform.tfstate
+
+stages:
+
+
+- stage: Terraform_Init
+  displayName: Terraform Init
+  jobs:
+  - job: TerraformInitJob
+    displayName: Terraform Init
+    steps:
+    - task: TerraformTaskV4@4
+      displayName: Terraform Init
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        backendServiceArm: 'Service_Connection_April_latest'
+        backendAzureRmResourceGroupName: 'DoNotDeleteBackend'
+        backendAzureRmStorageAccountName: 'subhojitbackendconfigsa'
+        backendAzureRmContainerName: 'statefile'
+        backendAzureRmKey: '$(State_File_Name)'
+
+- stage: Terraform_Plan
+  displayName: Terraform Plan
+  dependsOn: Terraform_Init
+  jobs:
+  - job: TerraformPlanJob
+    displayName: Terraform Plan
+    steps:
+    - task: TerraformTaskV4@4
+      displayName: Terraform Init
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        backendServiceArm: 'Service_Connection_April_latest'
+        backendAzureRmResourceGroupName: 'DoNotDeleteBackend'
+        backendAzureRmStorageAccountName: 'subhojitbackendconfigsa'
+        backendAzureRmContainerName: 'statefile'
+        backendAzureRmKey: '$(State_File_Name)'
+    - task: TerraformTaskV4@4
+      displayName: Terraform Plan
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        environmentServiceNameAzureRM: 'Service_Connection_April_latest'
+
+- stage: Terraform_Apply
+  displayName: Terraform Apply
+  dependsOn: Terraform_Plan
+  jobs:
+  - job: ManualValidationJob
+    displayName: Manual Validation
+    pool: server
+    timeoutInMinutes: 90
+    steps:
+    - task: ManualValidation@0
+      displayName: Manual Validation
+      inputs:
+        notifyUsers: 'subhojit1@outlook.com'
+        instructions: 'Please Review and Validate the Plan'
+  - job: TerraformApplyJob
+    displayName: Terraform Apply
+    dependsOn: ManualValidationJob
+    steps:
+    - task: TerraformTaskV4@4
+      displayName: Terraform Init
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        backendServiceArm: 'Service_Connection_April_latest'
+        backendAzureRmResourceGroupName: 'DoNotDeleteBackend'
+        backendAzureRmStorageAccountName: 'subhojitbackendconfigsa'
+        backendAzureRmContainerName: 'statefile'
+        backendAzureRmKey: '$(State_File_Name)'
+    - task: TerraformTaskV4@4
+      displayName: Terraform Apply
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        environmentServiceNameAzureRM: 'Service_Connection_April_latest'
